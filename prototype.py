@@ -8,7 +8,7 @@ from keras.applications.vgg16 import VGG16, preprocess_input, decode_predictions
 model = VGG16()
 
 # load an image from file
-image = load_img('plastic.jpg', target_size=(224, 224))
+image = load_img('test_images/plastic2.jpg', target_size=(224, 224))
 
 # convert the imgae pixels to a numpy array
 image = img_to_array(image)
@@ -21,8 +21,15 @@ yhat = model.predict(image)
 
 # convert the probabilities to class labels
 label = decode_predictions(yhat)
+
 # retrieve the most likely result, e.g. highest probability
 label = label[0][0]
+
 # print the classification
 print('%s (%.2f%%)' % (label[1], label[2]*100))
 
+# 
+if 'bottle' in label[1]:
+	print('plastic')
+else:
+	print('trash')
