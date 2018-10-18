@@ -1,6 +1,10 @@
 from keras.preprocessing.image import load_img, img_to_array
 from keras.applications.vgg16 import VGG16, preprocess_input, decode_predictions
 
+### Reference: https://machinelearningmastery.com/use-pre-trained-vgg-model-classify-objects-photographs/
+
+
+# load pretrained model
 model = VGG16()
 
 # load an image from file
