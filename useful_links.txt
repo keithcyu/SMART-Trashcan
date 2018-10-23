@@ -1,0 +1,13 @@
+How to use pretrained VGG16
+https://machinelearningmastery.com/use-pre-trained-vgg-model-classify-objects-photographs/
+
+json for list of recycle, compost, and trash
+https://www.reddit.com/r/datasets/comments/6enar8/looking_for_a_dataset_with_recyclable_items/
+
+TrashNet with Trash Dataset (AlexNet with 75% accuracy) Self made dataset with 6 classes / 2527 images
+https://github.com/garythung/trashnet
+- data in google drive links
+
+Running Keras models on iOS
+https://www.pyimagesearch.com/2018/04/23/running-keras-models-on-ios-with-coreml/
+
