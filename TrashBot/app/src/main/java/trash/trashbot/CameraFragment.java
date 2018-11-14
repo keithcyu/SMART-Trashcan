@@ -41,7 +41,7 @@ import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.os.Trace;
+import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Size;
 import android.util.TypedValue;
@@ -52,6 +52,7 @@ import android.view.View;
 import android.view.ViewGroup;
 
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -61,12 +62,14 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import trash.trashbot.env.Logger;
+import trash.trashbot.env.ImageUtils;
 
 
 public class CameraFragment extends Fragment {
     private static final Logger LOGGER = new Logger();
 
     private static final int MINIMUM_PREVIEW_SIZE = 320;
+    private static final int INPUT_SIZE = 224;
 
     private AutoFitTextureView textureView;
 
@@ -84,6 +87,20 @@ public class CameraFragment extends Fragment {
     private CameraCaptureSession captureSession;
     private boolean isProcessingFrame = false;
 
+    private byte[][] yuvBytes = new byte[3][];
+    private int[] rgbBytes = null;
+
+    private Bitmap rgbFrameBitmap = null;
+    private Bitmap croppedBitmap = null;
+    private Bitmap cropCopyBitmap = null;
+    private Matrix frameToCropTransform;
+    private Matrix cropToFrameTransform;
+
+    private Runnable postInferenceCallback;
+    private Runnable imageConverter;
+    private int yRowStride;
+    private Classifier classifier;
+
     private Handler backgroundHandler;
     private HandlerThread backgroundThread;
 
@@ -96,62 +113,60 @@ public class CameraFragment extends Fragment {
                     if (previewSize.getWidth() == 0 || previewSize.getHeight() == 0) {
                         return;
                     }
-//                    if (rgbBytes == null) {
-//                        rgbBytes = new int[previewWidth * previewHeight];
-//                    }
-//                    try {
+                    if (rgbBytes == null) {
+                        rgbBytes = new int[previewSize.getWidth() * previewSize.getHeight()];
+                    }
+                    try {
                         final Image image = reader.acquireLatestImage();
 //
                         if (image == null) {
                             return;
                         }
-                        image.close();
 
-//                        if (isProcessingFrame) {
-//                            image.close();
-//                            return;
-//                        }
-//                        isProcessingFrame = true;
+                        if (isProcessingFrame) {
+                            image.close();
+                            return;
+                        }
+
+                        isProcessingFrame = true;
 //                        Trace.beginSection("imageAvailable");
-//                        final Image.Plane[] planes = image.getPlanes();
-//                        fillBytes(planes, yuvBytes);
-//                        yRowStride = planes[0].getRowStride();
-//                        final int uvRowStride = planes[1].getRowStride();
-//                        final int uvPixelStride = planes[1].getPixelStride();
+                        final Image.Plane[] planes = image.getPlanes();
+                        fillBytes(planes, yuvBytes);
+                        yRowStride = planes[0].getRowStride();
+                        final int uvRowStride = planes[1].getRowStride();
+                        final int uvPixelStride = planes[1].getPixelStride();
 //
-//                        imageConverter =
-//                                new Runnable() {
-//                                    @Override
-//                                    public void run() {
-//                                        ImageUtils.convertYUV420ToARGB8888(
-//                                                yuvBytes[0],
-//                                                yuvBytes[1],
-//                                                yuvBytes[2],
-//                                                previewWidth,
-//                                                previewHeight,
-//                                                yRowStride,
-//                                                uvRowStride,
-//                                                uvPixelStride,
-//                                                rgbBytes);
-//                                    }
-//                                };
+                        imageConverter =
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        ImageUtils.convertYUV420ToARGB8888(
+                                                yuvBytes[0],
+                                                yuvBytes[1],
+                                                yuvBytes[2],
+                                                previewSize.getWidth(),
+                                                previewSize.getHeight(),
+                                                yRowStride,
+                                                uvRowStride,
+                                                uvPixelStride,
+                                                rgbBytes);
+                                    }
+                                };
 //
-//                        postInferenceCallback =
-//                                new Runnable() {
-//                                    @Override
-//                                    public void run() {
-//                                        image.close();
-//                                        isProcessingFrame = false;
-//                                    }
-//                                };
-//
-//                        processImage();
-//                    } catch (final Exception e) {
-//                        LOGGER.e(e, "Exception!");
-//                        Trace.endSection();
-//                        return;
-//                    }
-//                    Trace.endSection();
+                        postInferenceCallback =
+                                new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        image.close();
+                                        isProcessingFrame = false;
+                                    }
+                                };
+
+                        processImage();
+                    } catch (final Exception e) {
+                        LOGGER.e(e, "Exception!");
+                        return;
+                    }
                 }
             };
 
@@ -302,6 +317,19 @@ public class CameraFragment extends Fragment {
         }
     }
 
+    protected void fillBytes(final Image.Plane[] planes, final byte[][] yuvBytes) {
+        // Because of the variable row stride it's not possible to know in
+        // advance the actual necessary dimensions of the yuv planes.
+        for (int i = 0; i < planes.length; ++i) {
+            final ByteBuffer buffer = planes[i].getBuffer();
+            if (yuvBytes[i] == null) {
+                LOGGER.d("Initializing buffer %d at size %d", i, buffer.capacity());
+                yuvBytes[i] = new byte[buffer.capacity()];
+            }
+            buffer.get(yuvBytes[i]);
+        }
+    }
+
     private void openCamera(final int width, final int height) {
         setUpCameraOutputs();
         configureTransform(width, height);
@@ -401,8 +429,7 @@ public class CameraFragment extends Fragment {
 
             // For still image captures, we use the largest available size.
             final Size largest =
-                    Collections.max(
-                            Arrays.asList(map.getOutputSizes(ImageFormat.YUV_420_888)),
+                    Collections.max(Arrays.asList(map.getOutputSizes(ImageFormat.YUV_420_888)),
                             new CompareSizesByArea());
 
             sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
@@ -426,7 +453,7 @@ public class CameraFragment extends Fragment {
             LOGGER.e(e, "Exception!");
         }
 
-        onPreviewSizeChosen(previewSize, sensorOrientation);
+        onPreviewSizeChosen(sensorOrientation);
     }
 
     protected static Size chooseOptimalSize(final Size[] choices, final int width, final int height) {
@@ -520,42 +547,77 @@ public class CameraFragment extends Fragment {
         return requiredLevel <= deviceLevel;
     }
 
-    public void onPreviewSizeChosen(final Size size, final int rotation) {
-//        final float textSizePx = TypedValue.applyDimension(
-//                TypedValue.COMPLEX_UNIT_DIP, TEXT_SIZE_DIP, getResources().getDisplayMetrics());
-//        borderedText = new BorderedText(textSizePx);
-//        borderedText.setTypeface(Typeface.MONOSPACE);
-//
-//        classifier =
-//                TensorFlowImageClassifier.create(
-//                        getAssets(),
-//                        MODEL_FILE,
-//                        LABEL_FILE,
-//                        INPUT_SIZE,
-//                        IMAGE_MEAN,
-//                        IMAGE_STD,
-//                        INPUT_NAME,
-//                        OUTPUT_NAME);
-//
-//        previewWidth = size.getWidth();
-//        previewHeight = size.getHeight();
-//
-//        sensorOrientation = rotation - getScreenOrientation();
-//        LOGGER.i("Camera orientation relative to screen canvas: %d", sensorOrientation);
-//
-//        LOGGER.i("Initializing at size %dx%d", previewWidth, previewHeight);
-//        rgbFrameBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
-//        croppedBitmap = Bitmap.createBitmap(INPUT_SIZE, INPUT_SIZE, Bitmap.Config.ARGB_8888);
-//
-//        frameToCropTransform = ImageUtils.getTransformationMatrix(
-//                previewWidth, previewHeight,
-//                INPUT_SIZE, INPUT_SIZE,
-//                sensorOrientation, MAINTAIN_ASPECT);
-//
-//        cropToFrameTransform = new Matrix();
-//        frameToCropTransform.invert(cropToFrameTransform);
+    public void onPreviewSizeChosen(final int rotation) {
+
+        Activity activity = getActivity();
+        classifier = TensorFlowImageClassifier.create(activity.getAssets());
+
+        sensorOrientation = rotation - getScreenOrientation();
+        LOGGER.i("Camera orientation relative to screen canvas: %d", sensorOrientation);
+
+        LOGGER.i("Initializing at size %dx%d", previewSize.getWidth(), previewSize.getHeight());
+        rgbFrameBitmap = Bitmap.createBitmap(previewSize.getWidth(), previewSize.getHeight(),
+                Bitmap.Config.ARGB_8888);
+        croppedBitmap = Bitmap.createBitmap(INPUT_SIZE, INPUT_SIZE, Bitmap.Config.ARGB_8888);
+
+        frameToCropTransform = ImageUtils.getTransformationMatrix(
+                previewSize.getWidth(), previewSize.getHeight(),
+                INPUT_SIZE, INPUT_SIZE,
+                sensorOrientation, true);
+
+        cropToFrameTransform = new Matrix();
+        frameToCropTransform.invert(cropToFrameTransform);
     }
 
+    protected void processImage() {
+        rgbFrameBitmap.setPixels(getRgbBytes(),
+                0, previewSize.getWidth(),
+                0, 0, previewSize.getWidth(), previewSize.getHeight());
+        final Canvas canvas = new Canvas(croppedBitmap);
+        canvas.drawBitmap(rgbFrameBitmap, frameToCropTransform, null);
+
+        // For examining the actual TF input.
+        runInBackground(
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        final List<Classifier.Recognition> results = classifier.recognizeImage(croppedBitmap);
+                        LOGGER.i("Detect: %s", results);
+                        cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
+                        readyForNextImage();
+                    }
+                });
+    }
+
+    protected int getScreenOrientation() {
+        switch (getActivity().getWindowManager().getDefaultDisplay().getRotation()) {
+            case Surface.ROTATION_270:
+                return 270;
+            case Surface.ROTATION_180:
+                return 180;
+            case Surface.ROTATION_90:
+                return 90;
+            default:
+                return 0;
+        }
+    }
+
+    protected int[] getRgbBytes() {
+        imageConverter.run();
+        return rgbBytes;
+    }
+
+    protected synchronized void runInBackground(final Runnable r) {
+        if (backgroundHandler != null) {
+            backgroundHandler.post(r);
+        }
+    }
+
+    protected void readyForNextImage() {
+        if (postInferenceCallback != null) {
+            postInferenceCallback.run();
+        }
+    }
 
     public static CameraFragment newInstance() {
         return new CameraFragment();
