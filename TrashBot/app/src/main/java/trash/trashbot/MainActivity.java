@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
@@ -13,12 +14,15 @@ import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Size;
+import android.view.View;
+import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.Toast;
 
 import trash.trashbot.env.Logger;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppCompatActivity {
 
     // Used to load the 'native-lib' library on application startup.
 
@@ -34,15 +38,29 @@ public class MainActivity extends Activity {
 
     private boolean useCamera2API;
 
+    private Button botButton;
+    private Button menuButton;
+
+    private CameraFragment cameraFragment;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                WindowManager.LayoutParams.FLAG_FULLSCREEN);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
 
+
         LOGGER.i("MainActivity.onCreate()");
 
+    }
+
+    protected void onResume() {
+        LOGGER.i("MainActivity onResume()");
         if (hasPermission()) {
             LOGGER.i("hasPermission()");
             setFragment();
@@ -51,59 +69,43 @@ public class MainActivity extends Activity {
             requestPermission();
         }
 
+        setButtons();
+        super.onResume();
     }
 
-    private String chooseCamera() {
-        final CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-        try {
-            for (final String cameraId : manager.getCameraIdList()) {
-                final CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
+    private void setButtons() {
+        botButton = (Button)findViewById(R.id.botButton);
+        menuButton = (Button)findViewById(R.id.menuButton);
 
-                // We don't use a front facing camera in this sample.
-                final Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
-                if (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT) {
-                    continue;
-                }
+        botButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
 
-                final StreamConfigurationMap map =
-                        characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-
-                if (map == null) {
-                    continue;
-                }
-
-                // Fallback to camera1 API for internal cameras that don't have full support.
-                // This should help with legacy situations where using the camera2 API causes
-                // distorted or otherwise broken previews.
-                useCamera2API = (facing == CameraCharacteristics.LENS_FACING_EXTERNAL)
-                        || isHardwareLevelSupported(characteristics,
-                        CameraCharacteristics.INFO_SUPPORTED_HARDWARE_LEVEL_FULL);
-                LOGGER.i("Camera API lv2?: %s", useCamera2API);
-                return cameraId;
             }
-        } catch (CameraAccessException e) {
-            LOGGER.e(e, "Not allowed to access camera");
-        }
+        });
 
-        return null;
+        menuButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, LeaderboardActivity.class);
+                startActivity(intent);
+            }
+        });
     }
 
     protected void setFragment() {
-        String cameraId = chooseCamera();
-        LOGGER.i("cameraId = " + cameraId);
-        if (cameraId == null) {
-            Toast.makeText(this, "No Camera Detected", Toast.LENGTH_SHORT).show();
-            finish();
+
+        if(cameraFragment == null) {
+            cameraFragment = CameraFragment.newInstance();
+            LOGGER.i("create a fragment");
+
+            getFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.container, cameraFragment)
+                    .commit();
+            LOGGER.i("commit the fragment");
         }
 
-        CameraFragment fragment = CameraFragment.newInstance();
-        LOGGER.i("create a fragment");
-
-        getFragmentManager()
-                .beginTransaction()
-                .replace(R.id.container, fragment)
-                .commit();
-        LOGGER.i("commit the fragment");
     }
 
     // Returns true if the device supports the required hardware level, or better.
