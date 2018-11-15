@@ -43,13 +43,17 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.SystemClock;
 import android.text.TextUtils;
+import android.util.DisplayMetrics;
 import android.util.Size;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 
 
 import java.nio.ByteBuffer;
@@ -73,9 +77,10 @@ public class CameraFragment extends Fragment {
 
     private AutoFitTextureView textureView;
 
+    private ResultReviewer reviewer;
+
     private final Semaphore cameraOpenCloseLock = new Semaphore(1);
 
-    private final int layoutId = R.layout.camera_layout;
     private String cameraId;
     private Size previewSize;
     private final Size inputSize = new Size(640, 480);
@@ -92,7 +97,6 @@ public class CameraFragment extends Fragment {
 
     private Bitmap rgbFrameBitmap = null;
     private Bitmap croppedBitmap = null;
-    private Bitmap cropCopyBitmap = null;
     private Matrix frameToCropTransform;
     private Matrix cropToFrameTransform;
 
@@ -103,6 +107,8 @@ public class CameraFragment extends Fragment {
 
     private Handler backgroundHandler;
     private HandlerThread backgroundThread;
+
+    private ResultDialog dialog;
 
 
     private final ImageReader.OnImageAvailableListener imageListener =
@@ -118,10 +124,7 @@ public class CameraFragment extends Fragment {
                     }
                     try {
                         final Image image = reader.acquireLatestImage();
-//
-                        if (image == null) {
-                            return;
-                        }
+                        if (image == null) return;
 
                         if (isProcessingFrame) {
                             image.close();
@@ -129,13 +132,12 @@ public class CameraFragment extends Fragment {
                         }
 
                         isProcessingFrame = true;
-//                        Trace.beginSection("imageAvailable");
                         final Image.Plane[] planes = image.getPlanes();
                         fillBytes(planes, yuvBytes);
                         yRowStride = planes[0].getRowStride();
                         final int uvRowStride = planes[1].getRowStride();
                         final int uvPixelStride = planes[1].getPixelStride();
-//
+
                         imageConverter =
                                 new Runnable() {
                                     @Override
@@ -152,7 +154,7 @@ public class CameraFragment extends Fragment {
                                                 rgbBytes);
                                     }
                                 };
-//
+
                         postInferenceCallback =
                                 new Runnable() {
                                     @Override
@@ -161,7 +163,6 @@ public class CameraFragment extends Fragment {
                                         isProcessingFrame = false;
                                     }
                                 };
-
                         processImage();
                     } catch (final Exception e) {
                         LOGGER.e(e, "Exception!");
@@ -307,11 +308,9 @@ public class CameraFragment extends Fragment {
 
                         @Override
                         public void onConfigureFailed(final CameraCaptureSession cameraCaptureSession) {
-                            LOGGER.e("onConfigureFailed");
                         }
                     },
                     null);
-            LOGGER.i("create session finished");
         } catch (final CameraAccessException e) {
             LOGGER.e(e, "Exception!");
         }
@@ -581,9 +580,14 @@ public class CameraFragment extends Fragment {
                 new Runnable() {
                     @Override
                     public void run() {
+                        final long startTime = SystemClock.uptimeMillis();
                         final List<Classifier.Recognition> results = classifier.recognizeImage(croppedBitmap);
+                        final long lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
                         LOGGER.i("Detect: %s", results);
-                        cropCopyBitmap = Bitmap.createBitmap(croppedBitmap);
+                        LOGGER.i("Time used: " + lastProcessingTimeMs + "ms");
+                        reviewer.resultCheckin(results);
+                        DisplayInfo info = reviewer.decideInfo();
+                        displayInstruction(info);
                         readyForNextImage();
                     }
                 });
@@ -624,6 +628,31 @@ public class CameraFragment extends Fragment {
     }
 
     public CameraFragment() {
+        reviewer = ResultReviewer.newInstance();
+    }
+
+    private void displayInstruction(DisplayInfo info) {
+        if (info == null) {
+            if(dialog != null)
+                dialog.dismiss();
+            return;
+        }
+
+        if(dialog == null) {
+            View view = LayoutInflater.from(getContext()).inflate(R.layout.result_layout, null);
+            dialog = new ResultDialog(getContext(), R.style.ResultDialog);
+            dialog.setContentView(view);
+            dialog.setCancelable(false);
+
+            Window window = dialog.getWindow();
+            WindowManager.LayoutParams lp = window.getAttributes();
+            lp.y = -120;
+            window.setAttributes(lp);
+            window.setGravity(Gravity.CENTER_VERTICAL);
+        }
+
+        dialog.show();
+
     }
 
     @Override
@@ -662,6 +691,6 @@ public class CameraFragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        return inflater.inflate(layoutId, container, false);
+        return inflater.inflate(R.layout.camera_layout, container, false);
     }
 }
