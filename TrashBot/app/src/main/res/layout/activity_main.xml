@@ -5,26 +5,40 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="trash.trashbot.MainActivity"
-    android:background="@color/colorWhite">
+    tools:context="trash.trashbot.MainActivity">
 
-    <!-- Camera -->
-    <FrameLayout
-        android:id="@+id/container"
+    <RelativeLayout
+        android:id="@+id/relLayoutMain"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:layout_marginBottom="591dp" />
+        android:layout_height="match_parent"
+        android:layout_above="@id/relLayoutNavBar">
 
-    <!-- Labels -->
-    <LinearLayout
-        android:id="@+id/bottom"
+        <!-- Camera -->
+        <FrameLayout
+            android:id="@+id/container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentTop="true"
+            android:layout_above="@id/bottom"/>
+
+        <!-- Labels -->
+        <LinearLayout
+            android:id="@+id/bottom"
+            android:layout_width="match_parent"
+            android:layout_height="120dp"
+            android:orientation="horizontal"
+            android:layout_alignParentBottom="true"> <!-- This needs to match height of toolbar -->
+
+        </LinearLayout>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:id="@+id/relLayoutNavBar"
         android:layout_width="match_parent"
-        android:layout_height="120dp"
-        android:orientation="horizontal"
+        android:layout_height="40dp"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="35dp"> <!-- This needs to match height of toolbar -->
+        android:background="@color/colorWhite"></RelativeLayout>
 
-    </LinearLayout>
 
 </RelativeLayout>
