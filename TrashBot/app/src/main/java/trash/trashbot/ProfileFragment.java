@@ -18,15 +18,15 @@ public class ProfileFragment extends Fragment {
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.profile_fragment_layout,container,false);
-        btnTEST2 = (Button) view.findViewById(R.id.btnTEST2);
-
-        btnTEST2.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Toast.makeText(getActivity(), "TESTING BUTTON CLICK 1",Toast.LENGTH_SHORT).show();
-            }
-        });
+        View view = inflater.inflate(R.layout.profile_layout, container, false);
+//        btnTEST2 = (Button) view.findViewById(R.id.btnTEST2);
+//
+//        btnTEST2.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                Toast.makeText(getActivity(), "TESTING BUTTON CLICK 1",Toast.LENGTH_SHORT).show();
+//            }
+//        });
 
         return view;
     }
