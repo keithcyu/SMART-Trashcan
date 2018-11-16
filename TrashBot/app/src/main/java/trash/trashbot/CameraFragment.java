@@ -108,15 +108,23 @@ public class CameraFragment extends Fragment {
     private Handler backgroundHandler;
     private HandlerThread backgroundThread;
 
-    private ResultDialog dialog;
+    private Handler listenHandler;
+    private HandlerThread listenThread;
+
+    private Handler onHandler;
+    private HandlerThread onThread;
+
+    public ResultDialog dialog;
     private boolean itemLocked = false;
+    private boolean opened = false;
+
+    private int counter = 0;
 
 
     private final ImageReader.OnImageAvailableListener imageListener =
             new ImageReader.OnImageAvailableListener() {
                 @Override
                 public void onImageAvailable(final ImageReader reader) {
-                    LOGGER.i("onImageAvailable");
                     //We need wait until we have some size from onPreviewSizeChosen
                     if (previewSize.getWidth() == 0 || previewSize.getHeight() == 0) {
                         return;
@@ -182,6 +190,7 @@ public class CameraFragment extends Fragment {
                     cameraDevice = cd;
                     createCameraPreviewSession();
                     cameraOpenCloseLock.release();
+                    LOGGER.i("statecallback onOpened end");
                 }
 
                 @Override
@@ -205,32 +214,18 @@ public class CameraFragment extends Fragment {
                 }
             };
 
-    private final CameraCaptureSession.CaptureCallback captureCallback =
-            new CameraCaptureSession.CaptureCallback() {
-                @Override
-                public void onCaptureProgressed(
-                        final CameraCaptureSession session,
-                        final CaptureRequest request,
-                        final CaptureResult partialResult) {
-                }
-
-                @Override
-                public void onCaptureCompleted(
-                        final CameraCaptureSession session,
-                        final CaptureRequest request,
-                        final TotalCaptureResult result) {
-                }
-            };
-
 
     private final TextureView.SurfaceTextureListener surfaceTextureListener =
             new TextureView.SurfaceTextureListener() {
                 @Override
                 public void onSurfaceTextureAvailable(
                         final SurfaceTexture texture, final int width, final int height) {
-                    LOGGER.i("onSurfaceTextureAvailable");
-                    openCamera(width, height);
-                    LOGGER.i("opencamera finished");
+                    if(!opened) {
+                        LOGGER.i("onSurfaceTextureAvailable");
+                        openCamera(width, height);
+                        opened = true;
+                        LOGGER.i("opencamera finished");
+                    }
                 }
 
                 @Override
@@ -274,7 +269,7 @@ public class CameraFragment extends Fragment {
                     previewSize.getWidth(), previewSize.getHeight(),
                     ImageFormat.YUV_420_888, 2);
 //
-            previewReader.setOnImageAvailableListener(imageListener, backgroundHandler);
+            previewReader.setOnImageAvailableListener(imageListener, listenHandler);
             previewRequestBuilder.addTarget(previewReader.getSurface());
 
             // Auto focus should be continuous for camera preview.
@@ -285,7 +280,6 @@ public class CameraFragment extends Fragment {
             previewRequestBuilder.set(
                     CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
 
-            LOGGER.i("addTargetFinished");
             // Here, we create a CameraCaptureSession for camera preview.
             cameraDevice.createCaptureSession(
                     Arrays.asList(surface, previewReader.getSurface()),
@@ -306,7 +300,7 @@ public class CameraFragment extends Fragment {
                                 // Finally, we start displaying the camera preview.
                                 previewRequest = previewRequestBuilder.build();
                                 captureSession.setRepeatingRequest(
-                                        previewRequest, captureCallback, backgroundHandler);
+                                        previewRequest, null, backgroundHandler);
                             } catch (final CameraAccessException e) {
                                 LOGGER.e(e, "Exception!");
                             }
@@ -317,7 +311,8 @@ public class CameraFragment extends Fragment {
                             LOGGER.i("onConfigureFailed");
                         }
                     },
-                    null);
+                    onHandler);
+            LOGGER.i("createSessionFinished");
         } catch (final CameraAccessException e) {
             LOGGER.e(e, "Exception!");
         }
@@ -346,7 +341,8 @@ public class CameraFragment extends Fragment {
             if (!cameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
-            manager.openCamera(cameraId, stateCallback, backgroundHandler);
+            manager.openCamera(cameraId, stateCallback, onHandler);
+            LOGGER.i("openCamera end");
         } catch (final CameraAccessException e) {
             LOGGER.e(e, "Exception!");
         } catch (final InterruptedException e) {
@@ -377,13 +373,22 @@ public class CameraFragment extends Fragment {
             throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
         } finally {
             cameraOpenCloseLock.release();
+            opened = false;
         }
     }
 
     private void startBackgroundThread() {
-        backgroundThread = new HandlerThread("ImageListener");
+        backgroundThread = new HandlerThread("background");
         backgroundThread.start();
         backgroundHandler = new Handler(backgroundThread.getLooper());
+
+        onThread = new HandlerThread("onEvent");
+        onThread.start();
+        onHandler = new Handler(onThread.getLooper());
+
+        listenThread = new HandlerThread("listen");
+        listenThread.start();
+        listenHandler = new Handler(listenThread.getLooper());
     }
 
     /**
@@ -391,8 +396,16 @@ public class CameraFragment extends Fragment {
      */
     private void stopBackgroundThread() {
         backgroundThread.quitSafely();
+        onThread.quitSafely();
+        listenThread.quitSafely();
         try {
             backgroundThread.join();
+            onThread.join();
+            listenThread.join();
+            onThread = null;
+            onHandler = null;
+            listenThread = null;
+            listenHandler = null;
             backgroundThread = null;
             backgroundHandler = null;
         } catch (final InterruptedException e) {
@@ -596,8 +609,8 @@ public class CameraFragment extends Fragment {
                         final long startTime = SystemClock.uptimeMillis();
                         final List<Classifier.Recognition> results = classifier.recognizeImage(croppedBitmap);
                         final long lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
-                        LOGGER.i("Detect: %s", results);
-                        LOGGER.i("Time used: " + lastProcessingTimeMs + "ms");
+//                        LOGGER.i("Detect: %s", results);
+//                        LOGGER.i("Time used: " + lastProcessingTimeMs + "ms");
                         reviewer.resultCheckin(results);
                         DisplayInfo info = reviewer.decideInfo();
                         displayInstruction(info);
@@ -645,8 +658,11 @@ public class CameraFragment extends Fragment {
     }
 
     private void displayInstruction(DisplayInfo info) {
+        // null if not in any of the lists
+
         if (info == null) {
-            if(dialog != null) {
+            if(dialog != null){
+                LOGGER.i("dialog dismiss! displayInstruction");
                 dialog.dismiss();
                 dialog = null;
             }
@@ -655,8 +671,8 @@ public class CameraFragment extends Fragment {
         }
 
         if(dialog == null) {
-            View view = LayoutInflater.from(getContext()).inflate(R.layout.result_layout, null);
-            dialog = new ResultDialog(getContext(), R.style.ResultDialog);
+            View view = LayoutInflater.from(getActivity()).inflate(R.layout.result_layout, null);
+            dialog = new ResultDialog(getActivity(), R.style.ResultDialog);
             dialog.setContentView(view);
             dialog.setCancelable(false);
 
@@ -669,11 +685,11 @@ public class CameraFragment extends Fragment {
             window.setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
             dialog.setCanceledOnTouchOutside(true);
+
+            itemLocked = true;
+            LOGGER.i("dialog show!");
+            dialog.show();
         }
-
-        itemLocked = true;
-        dialog.show();
-
     }
 
     @Override
@@ -686,6 +702,7 @@ public class CameraFragment extends Fragment {
 
     @Override
     public void onViewCreated(final View view, final Bundle savedInstanceState) {
+        LOGGER.i("onViewCreated");
         textureView = (AutoFitTextureView) view.findViewById(R.id.texture);
     }
 
@@ -693,13 +710,20 @@ public class CameraFragment extends Fragment {
     @Override
     public void onResume() {
         LOGGER.i("onResume");
-        super.onResume();
+        if(dialog != null) {
+            LOGGER.i("dialog dismiss! onResume");
+            dialog.dismiss();
+            dialog = null;
+        }
         startBackgroundThread();
+        super.onResume();
 
         if (textureView.isAvailable()) {
             LOGGER.i("textureView available");
             openCamera(textureView.getWidth(), textureView.getHeight());
-            LOGGER.i("opencamera finished");
+            opened = true;
+            textureView.setSurfaceTextureListener(surfaceTextureListener);
+            LOGGER.i("onResume openCamera finished");
         } else {
             textureView.setSurfaceTextureListener(surfaceTextureListener);
             LOGGER.i("setsurfacelistener");
@@ -709,12 +733,14 @@ public class CameraFragment extends Fragment {
     @Override
     public void onPause() {
         LOGGER.i("onPause");
+        closeCamera();
+        stopBackgroundThread();
         if(dialog != null) {
+            LOGGER.i("dialog dismiss! onPause");
             dialog.dismiss();
             dialog = null;
         }
-        closeCamera();
-        stopBackgroundThread();
+        textureView.setSurfaceTextureListener(null);
         super.onPause();
     }
 

@@ -87,6 +87,10 @@ public class MainActivity extends AppCompatActivity {
         menuButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if(cameraFragment.dialog != null) {
+                    cameraFragment.dialog.dismiss();
+                }
+
                 Intent intent = new Intent(MainActivity.this, LeaderboardActivity.class);
                 startActivity(intent);
             }
