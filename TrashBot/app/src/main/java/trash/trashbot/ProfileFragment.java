@@ -13,15 +13,15 @@ public class ProfileFragment extends Fragment {
 
     private static final String TAG = "ProfileFragment";
 
-    private Button btnTEST;
+    private Button btnTEST2;
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.profile_fragment_layout,container,false);
-        btnTEST = (Button) view.findViewById(R.id.btnTEST);
+        btnTEST2 = (Button) view.findViewById(R.id.btnTEST2);
 
-        btnTEST.setOnClickListener(new View.OnClickListener() {
+        btnTEST2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Toast.makeText(getActivity(), "TESTING BUTTON CLICK 1",Toast.LENGTH_SHORT).show();
