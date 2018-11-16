@@ -43,6 +43,7 @@ apply from: "download-models.gradle"
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'com.android.support:support-v4:26.1.0'
+    implementation 'de.hdodenhof:circleimageview:2.2.0'
     compile 'org.tensorflow:tensorflow-android:+'
     implementation 'com.android.support:appcompat-v7:27.1.0'
     implementation 'com.android.support.constraint:constraint-layout:1.1.3'
