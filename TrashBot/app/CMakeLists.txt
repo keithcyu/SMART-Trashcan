@@ -13,7 +13,7 @@ cmake_minimum_required(VERSION 3.4.1)
 get_filename_component(SAMPLE_SRC_DIR  ${CMAKE_SOURCE_DIR}  ABSOLUTE)
 message(STATUS "SAMPLE_SRC_DIR: " ${SAMPLE_SRC_DIR})
 file(GLOB_RECURSE tensorflow_demo_sources ${SAMPLE_SRC_DIR}/jni/*.*)
-add_library(tensorflow_demo SHARED
+add_library(tensorflow-demo SHARED
             ${tensorflow_demo_sources})
 
 # Searches for a specified prebuilt library and stores the path as a
@@ -33,7 +33,7 @@ find_library( # Sets the name of the path variable.
 # can link multiple libraries, such as libraries you define in this
 # build script, prebuilt third-party libraries, or system libraries.
 
-target_link_libraries( tensorflow_demo
+target_link_libraries( tensorflow-demo
                        android
                        log
                        jnigraphics
