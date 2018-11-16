@@ -24,9 +24,10 @@
         <RelativeLayout
             android:id="@+id/bottom"
             android:layout_width="match_parent"
-            android:layout_height="120dp"
+            android:layout_height="122dp"
             android:orientation="horizontal"
-            android:layout_alignParentBottom="true"> <!-- This needs to match height of toolbar -->
+            android:background="@color/colorPrimary"
+            android:layout_alignParentBottom="true">
 
             <Button
                 android:id="@+id/botButton"
@@ -40,12 +41,14 @@
 
             <Button
                 android:id="@+id/menuButton"
-                android:layout_width="wrap_content"
-                android:layout_height="35dp"
+                android:layout_width="65dp"
+                android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:layout_marginEnd="34dp"
-                android:text="Menu" />
+                android:layout_marginEnd="28dp"
+                android:gravity="center"
+                android:text="Menu"
+                android:textAlignment="center" />
 
         </RelativeLayout>
 

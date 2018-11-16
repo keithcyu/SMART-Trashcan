@@ -2,8 +2,10 @@ package trash.trashbot;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.camera2.CameraAccessException;
@@ -33,13 +35,10 @@ public class MainActivity extends AppCompatActivity {
 
     private static final Logger LOGGER = new Logger();
 
-    protected int previewWidth = 0;
-    protected int previewHeight = 0;
-
-    private boolean useCamera2API;
-
     private Button botButton;
     private Button menuButton;
+
+    public AlertDialog dialog;
 
     private CameraFragment cameraFragment;
 
@@ -80,7 +79,26 @@ public class MainActivity extends AppCompatActivity {
         botButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                if(cameraFragment.dialog == null) {
+                    Toast.makeText(MainActivity.this,
+                            "You must scan something!", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                cameraFragment.dialog.dismiss();
+                dialog = new AlertDialog.Builder(MainActivity.this)
+                        .setIcon(R.drawable.correct)
+                        .setTitle("You BOT it!")
+                        .setMessage("Successfully collect "
+                                + String.valueOf(40 + (int)(Math.random() * 40)) + " points!")
+                        .setPositiveButton("OK",
+                                new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface log, int which) {
+                                        dialog.dismiss();
+                                        dialog = null;
+                                    }
+                                }).create();
+                dialog.show();
             }
         });
 

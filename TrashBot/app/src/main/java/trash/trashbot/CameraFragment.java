@@ -17,6 +17,7 @@
 package trash.trashbot;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.res.Configuration;
@@ -54,6 +55,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.TextView;
 
 
 import java.nio.ByteBuffer;
@@ -115,10 +117,7 @@ public class CameraFragment extends Fragment {
     private HandlerThread onThread;
 
     public ResultDialog dialog;
-    private boolean itemLocked = false;
     private boolean opened = false;
-
-    private int counter = 0;
 
 
     private final ImageReader.OnImageAvailableListener imageListener =
@@ -609,7 +608,7 @@ public class CameraFragment extends Fragment {
                         final long startTime = SystemClock.uptimeMillis();
                         final List<Classifier.Recognition> results = classifier.recognizeImage(croppedBitmap);
                         final long lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
-//                        LOGGER.i("Detect: %s", results);
+                        LOGGER.i("Detect: %s", results);
 //                        LOGGER.i("Time used: " + lastProcessingTimeMs + "ms");
                         reviewer.resultCheckin(results);
                         DisplayInfo info = reviewer.decideInfo();
@@ -666,13 +665,17 @@ public class CameraFragment extends Fragment {
                 dialog.dismiss();
                 dialog = null;
             }
-            itemLocked = false;
             return;
         }
 
         if(dialog == null) {
+            AlertDialog log = ((MainActivity) getActivity()).dialog;
+            if (log != null)
+                return;
+
             View view = LayoutInflater.from(getActivity()).inflate(R.layout.result_layout, null);
             dialog = new ResultDialog(getActivity(), R.style.ResultDialog);
+
             dialog.setContentView(view);
             dialog.setCancelable(false);
 
@@ -686,8 +689,11 @@ public class CameraFragment extends Fragment {
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
             dialog.setCanceledOnTouchOutside(true);
 
-            itemLocked = true;
+            TextView textHint = (TextView) dialog.findViewById(R.id.result);
+            textHint.setText(info.getName() + "\n" + info.getType());
+
             LOGGER.i("dialog show!");
+
             dialog.show();
         }
     }

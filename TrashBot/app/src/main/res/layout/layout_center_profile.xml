@@ -1,125 +1,156 @@
-<merge xmlns:tools="http://schemas.android.com/tools"
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <RelativeLayout
+
+    <!-- ********************Middle Section*************************** -->
+    <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/white">
-
-
-
-        <!-- ********************Middle Section*************************** -->
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/relLayout1"
+        android:fillViewport="true">
 
         <RelativeLayout
-            android:id="@+id/relLayout2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/relLayout1"
-            android:background="@drawable/white_grey_border_bottom">
-
-            <LinearLayout
-                android:id="@+id/linLayout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:weightSum="100">
-
-
-                <RelativeLayout
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginStart="25dp"
-                    android:layout_weight="25">
-
-                    <de.hdodenhof.circleimageview.CircleImageView
-                        android:id="@+id/profile_photo"
-                        android:layout_width="80dp"
-                        android:layout_height="80dp"
-                        android:layout_centerVertical="true"
-                        android:src="@drawable/manhattan_map"
-                        app:civ_border_color="@color/black"
-                        app:civ_border_width="2dp"/>
-
-
-                </RelativeLayout>
-
-                <RelativeLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="30dp"
-                    android:layout_marginStart="30dp"
-                    android:layout_weight="75">
-
-                    <include layout="@layout/snippet_top_profile"/>
-
-                </RelativeLayout>
-
-            </LinearLayout>
-
-
-            <LinearLayout
-                android:id="@+id/linLayout2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_below="@+id/linLayout"
-                android:orientation="vertical"
-                android:padding="20dp">
-
-                <TextView
-                    android:id="@+id/display_name"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Mitch"
-                    android:textColor="@color/black"
-                    android:textSize="16sp"
-                    android:textStyle="bold"/>
-
-                <TextView
-                    android:id="@+id/description"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:text="I live in Vancouver, BC"
-                    android:textColor="@color/black"
-                    android:textSize="16sp"/>
-
-                <TextView
-                    android:id="@+id/website"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:text="https://codingwithmitch.com"
-                    android:textColor="@color/link_blue"
-                    android:textSize="16sp"
-                    />
-
-
-            </LinearLayout>
+            android:background="@color/white">
 
             <RelativeLayout
-                android:id="@+id/relLayout3"
+                android:id="@+id/relLayout2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_below="@+id/linLayout2"
-                android:layout_marginBottom="50dp">
 
-                <GridView
-                    android:id="@+id/gridView"
+                android:background="@drawable/white_grey_border_bottom">
+
+                <LinearLayout
+                    android:id="@+id/linLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:horizontalSpacing="1dp"
-                    android:numColumns="3"
-                    android:stretchMode="columnWidth"
-                    android:verticalSpacing="1dp">
+                    android:orientation="horizontal"
+                    android:weightSum="100">
 
-                </GridView>
+
+                    <RelativeLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="25dp"
+                        android:layout_weight="25">
+
+                        <de.hdodenhof.circleimageview.CircleImageView xmlns:app="http://schemas.android.com/apk/res-auto"
+                            android:id="@+id/profile_photo"
+                            android:layout_width="80dp"
+                            android:layout_height="80dp"
+                            android:layout_centerInParent="true"
+                            android:layout_centerVertical="true"
+                            android:src="@drawable/manhattan_map"
+                            app:civ_border_color="@color/black"
+                            app:civ_border_width="2dp" />
+
+
+                    </RelativeLayout>
+
+                    <RelativeLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="30dp"
+                        android:layout_marginEnd="30dp"
+                        android:layout_weight="75">
+
+                        <include layout="@layout/snippet_top_profile" />
+
+                    </RelativeLayout>
+
+                </LinearLayout>
+
+
+                <LinearLayout
+                    android:id="@+id/linLayout2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_below="@+id/linLayout"
+                    android:orientation="vertical"
+                    android:padding="10dp">
+
+                    <TextView
+                        android:id="@+id/display_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Cornell Tech"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/description"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="Roosevelt Island, 10044"
+                        android:textColor="@color/black"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/website"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp"
+                        android:text="https://tech.cornell.edu"
+                        android:textColor="@color/link_blue"
+                        android:textSize="16sp" />
+
+                </LinearLayout>
 
             </RelativeLayout>
 
+            <TextView
+                android:id="@+id/traceTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/relLayout2"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="5dp"
+                android:gravity="center"
+                android:text="CarbonFootprint" />
+
+            <RelativeLayout
+                android:id="@+id/chart1_ly"
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:layout_below="@+id/traceTitle">
+
+                <com.github.mikephil.charting.charts.BarChart
+                    android:id="@+id/chart1"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="10dp" />
+            </RelativeLayout>
+
+            <TextView
+                android:id="@+id/decompositionTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/chart1_ly"
+                android:layout_centerHorizontal="true"
+                android:layout_marginTop="5dp"
+                android:gravity="center"
+                android:text="Footprint Decomposition" />
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="250dp"
+                android:layout_below="@+id/decompositionTitle">
+
+                <com.github.mikephil.charting.charts.PieChart
+                    android:id="@+id/chart2"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="10dp" />
+            </RelativeLayout>
+
+
         </RelativeLayout>
 
-    </RelativeLayout>
+    </ScrollView>
+
 
 </merge>

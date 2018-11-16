@@ -43,8 +43,8 @@ public class TensorFlowImageClassifier implements Classifier {
   // Config values.
   private static String inputName = "input";
   private static String outputName = "output";
-  private static String modelFileName = "file:///android_asset/tensorflow_inception_graph.pb";
-  private static String labelFileName = "file:///android_asset/imagenet_comp_graph_label_strings.txt";
+  private static String modelFileName = "file:///android_asset/inception_graph.pb";
+  private static String labelFileName = "file:///android_asset/inception_label.txt";
 
   private static int inputSize = 224;
   private static int imageMean = 117;
